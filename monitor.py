@@ -84,7 +84,12 @@ def detectar_anomalias(df):
     merged["lower"] = (merged["mean"] - UMBRAL_ANOMALIA * merged["std"]).clip(lower=0)
     merged["upper"] = merged["mean"] + UMBRAL_ANOMALIA * merged["std"]
     merged["gasto"] = merged["gasto"].fillna(0)
-    merged["es_anomalia"] = (merged["gasto"] < merged["lower"]) | (merged["gasto"] < 0.01)
+    hora_actual_global = datetime.now().hour
+    fecha_hoy_global = datetime.now().strftime("%Y-%m-%d")
+    merged["es_anomalia"] = (
+      ((merged["gasto"] < merged["lower"]) | (merged["gasto"] < 0.01)) &
+      ~((merged["fecha"] == fecha_hoy_global) & (merged["hora"] >= hora_actual_global))
+    )
     merged["pct"] = ((merged["gasto"] - merged["mean"]) / merged["mean"].replace(0, 1) * 100).round(1)
     return merged, stats
 
@@ -440,8 +445,9 @@ if __name__ == "__main__":
         fecha_hoy = ahora.strftime("%Y-%m-%d")
         hora_actual = ahora.hour
         anomalias_recientes = anomalias[
-            (anomalias["fecha"] == fecha_hoy) &
-            (anomalias["hora"] >= max(0, hora_actual - 2))
+               (anomalias["fecha"] == fecha_hoy) &
+               (anomalias["hora"] >= max(0, hora_actual - 2)) &
+               (anomalias["hora"] < hora_actual)
         ]
 
         if not anomalias_recientes.empty:
